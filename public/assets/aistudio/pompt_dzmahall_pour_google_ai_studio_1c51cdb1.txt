@@ -1,0 +1,218 @@
+## MODULE ADMINISTRATEUR — GESTION DES TRANSPORTEURS ALGÉRIENS
+
+### 1. Objectif
+
+Ajoute à l'application DzMahall une section complète dans le panneau d'administration appelée **« Transporteurs & Intégrations »**, accessible depuis le menu `/admin`.
+
+Cette section doit permettre de configurer, tester, activer, désactiver et gérer la connexion avec la majorité des sociétés de livraison opérant en Algérie, chacune selon sa propre documentation et ses exigences techniques.
+
+Le système doit être extensible : je dois pouvoir ajouter un nouveau transporteur ultérieurement sans reconstruire la boutique ni modifier les fonctionnalités principales des commandes.
+
+### 2. Interface d'administration
+
+Crée les pages suivantes :
+
+- `/admin/shipping` : tableau de bord des transporteurs.
+- `/admin/shipping/providers` : liste des sociétés de livraison.
+- `/admin/shipping/providers/:id` : configuration détaillée d'un transporteur.
+- `/admin/shipping/rates` : tarifs de livraison.
+- `/admin/shipping/offices` : bureaux et points Stop Desk.
+- `/admin/shipping/shipments` : expéditions et suivi des colis.
+
+Affiche chaque transporteur sous forme de carte comprenant :
+- Nom et logo, si disponibles.
+- Statut : Non configuré, Configuration incomplète, À tester, Connecté, Erreur ou Désactivé.
+- Modes de livraison pris en charge.
+- Dernier test de connexion.
+- Nombre d'expéditions créées.
+- Boutons « Configurer », « Tester la connexion », « Synchroniser » et « Désactiver ».
+
+Ne marque jamais un transporteur comme connecté avant d'avoir effectué un test réel réussi.
+
+### 3. Transporteurs à prévoir
+
+Prépare une architecture extensible permettant d'intégrer, après vérification de leurs services et documentations :
+
+- Yalidine.
+- Guepex.
+- EcoTrack.
+- ZR Express.
+- Maystro Delivery.
+- Noest.
+- Anderson.
+- DHD.
+- D'autres transporteurs algériens ajoutés ultérieurement.
+
+Cette liste est indicative. Vérifie la disponibilité des API, les modalités d'accès et les fonctions proposées par chaque société avant d'activer son intégration. Ne suppose pas qu'elles proposent toutes les mêmes fonctionnalités.
+
+### 4. Configuration individuelle de chaque transporteur
+
+Chaque société doit posséder son propre formulaire de configuration dynamique, adapté à ses exigences réelles.
+
+Selon sa documentation, les champs pourront inclure :
+- Clé API.
+- API Secret.
+- Token Bearer.
+- Identifiant client ou compte.
+- Nom d'utilisateur et mot de passe API, si nécessaires.
+- Code ou identifiant du magasin.
+- URL de base de l'API.
+- Environnement de test ou de production.
+- Clé de signature webhook.
+- Identifiants ou paramètres supplémentaires propres au transporteur.
+
+Ne rends pas tous ces champs obligatoires pour tous les transporteurs. Chaque connecteur doit déclarer les paramètres réellement exigés par son API.
+
+Ajoute :
+- Champs masqués pour les secrets.
+- Bouton pour afficher ou masquer temporairement une valeur.
+- Possibilité de remplacer ou supprimer une clé.
+- Indication des champs obligatoires.
+- Validation du format.
+- Sauvegarde sécurisée.
+- Bouton « Tester la connexion ».
+- Messages d'erreur compréhensibles.
+- Date et résultat du dernier test.
+
+Ne demande pas de véritables identifiants tant que le formulaire et le mécanisme de stockage sécurisé ne sont pas opérationnels.
+
+### 5. Sécurité des clés API
+
+Les secrets des transporteurs doivent être stockés côté serveur, dans un gestionnaire de secrets adapté ou dans un stockage chiffré dont les clés de chiffrement restent hors de la base de données.
+
+Ne stocke jamais de clés privées dans :
+- Le code React.
+- Les variables d'environnement publiques préfixées `VITE_`.
+- Le navigateur ou le localStorage.
+- Les documents Firestore accessibles aux clients.
+- Les journaux ou les messages d'erreur.
+
+Utilise les secrets de Firebase Cloud Functions ou du serveur Node.js pour les identifiants d'intégration.
+
+Les opérations suivantes doivent être réservées aux administrateurs autorisés :
+- Ajouter ou modifier une configuration.
+- Consulter ou remplacer des identifiants.
+- Tester une connexion.
+- Activer un transporteur.
+- Déclencher une synchronisation.
+
+Lorsqu'un formulaire est rouvert, ne renvoie jamais la valeur complète d'un secret au navigateur. Affiche uniquement un indicateur tel que « Clé configurée ».
+
+### 6. Architecture des connecteurs
+
+Crée une interface commune pour tous les transporteurs, avec un connecteur spécifique pour chacun.
+
+Chaque connecteur doit définir uniquement les opérations réellement prises en charge :
+- Tester la connexion.
+- Récupérer les tarifs.
+- Récupérer les bureaux et points Stop Desk.
+- Créer une expédition.
+- Générer ou récupérer une étiquette.
+- Récupérer le numéro de suivi.
+- Consulter le statut d'une expédition.
+- Synchroniser les statuts via API ou webhook.
+- Annuler une expédition, si autorisé.
+
+Utilise une architecture modulaire, par exemple :
+
+`src/lib/shipping/` pour les types et interfaces partagés.
+
+`src/server/shipping/` pour les connecteurs exécutés côté serveur.
+
+Prévois un adaptateur par transporteur, sans mettre les appels API sensibles dans le frontend.
+
+Si un transporteur ne dispose pas d'une API accessible, prévois un mode manuel avec import/export et mise à jour des suivis.
+
+### 7. Tarifs et modes de livraison
+
+Permets de gérer, pour chaque transporteur :
+- Livraison à domicile.
+- Stop Desk / bureau, si disponible.
+- Tarifs par wilaya.
+- Tarifs spécifiques par commune, si pris en charge.
+- Frais supplémentaires documentés.
+- Délais annoncés par le transporteur, lorsqu'ils sont disponibles.
+- Conditions et limites de livraison.
+- Dernière date de synchronisation des tarifs.
+
+Les tarifs peuvent être récupérés depuis l'API lorsque cette fonction existe, ou saisis manuellement dans l'administration.
+
+Distingue toujours :
+1. Le tarif retourné par le transporteur.
+2. Le tarif facturé au client par DzMahall.
+3. Le coût réellement supporté par DzMahall.
+
+Ne remplace pas automatiquement les tarifs configurés par des données externes sans validation administrative.
+
+### 8. Gestion des expéditions
+
+Lorsqu'une commande est confirmée, l'administrateur doit pouvoir sélectionner un transporteur et créer une expédition.
+
+Le système doit :
+- Vérifier les informations nécessaires.
+- Vérifier le mode de livraison et le bureau choisi.
+- Envoyer la demande au transporteur côté serveur.
+- Enregistrer la réponse et le numéro de suivi.
+- Éviter les créations d'expédition en double.
+- Permettre d'imprimer l'étiquette si le transporteur la fournit.
+- Conserver l'historique des tentatives et des erreurs.
+
+Ajoute une action « Créer les expéditions » aux commandes éligibles, avec confirmation avant l'envoi.
+
+Une commande ne doit pas être considérée comme expédiée simplement parce que le bouton a été cliqué. Enregistre la réponse du transporteur et actualise le statut selon les règles définies.
+
+### 9. Synchronisation et webhooks
+
+Prévois la synchronisation des statuts de livraison lorsque le transporteur offre une API ou des webhooks.
+
+Les événements peuvent inclure :
+- Colis créé.
+- Colis pris en charge.
+- En transit.
+- En cours de livraison.
+- Livré.
+- Échec de livraison.
+- Retour en cours.
+- Retourné à l'expéditeur.
+
+Vérifie l'authenticité des webhooks, évite les événements dupliqués et conserve un journal horodaté.
+
+Ne modifie pas aveuglément le statut d'une commande à partir d'une requête non authentifiée.
+
+### 10. Mode test et diagnostic
+
+Pour chaque transporteur, prévois :
+- Mode test si officiellement disponible.
+- Test de connexion.
+- Diagnostic des paramètres manquants.
+- Historique des appels et erreurs sans données sensibles.
+- Limitation des tentatives.
+- Gestion des délais d'attente et des erreurs temporaires.
+- Bouton de désactivation immédiate.
+
+Si les identifiants ou la documentation manquent, affiche « Configuration requise » et laisse les autres transporteurs fonctionner normalement.
+
+Ne crée jamais de faux résultats de connexion ou de fausses expéditions pour donner l'impression que l'intégration fonctionne.
+
+### 11. Critères d'acceptation
+
+Le module est considéré comme fonctionnel lorsque :
+
+1. Un administrateur peut consulter la liste des transporteurs.
+2. Il peut ouvrir une configuration propre à chaque transporteur.
+3. Les champs correspondent à la documentation vérifiée.
+4. Les secrets sont enregistrés côté serveur et ne sont pas exposés au navigateur.
+5. Le test de connexion renvoie un résultat réel ou un diagnostic précis.
+6. Un transporteur non configuré ne bloque pas les autres.
+7. Une expédition ne peut pas être créée deux fois par erreur.
+8. Les tarifs, bureaux et suivis ne sont présentés comme synchronisés que si la synchronisation est réelle.
+9. Les erreurs sont visibles dans l'administration sans révéler les clés ou les données sensibles.
+10. Un nouveau transporteur peut être ajouté grâce à l'architecture modulaire.
+
+### 12. Instructions d'implémentation dans Google AI Studio
+
+Intègre ce module dans le projet DzMahall existant. Commence par créer l'interface et le modèle de données, puis implémente la sécurité des secrets, le connecteur d'un premier transporteur documenté et les tests correspondants.
+
+Ne génère pas tous les connecteurs avec des appels fictifs. Termine et teste réellement le premier connecteur avant de reproduire le modèle pour les suivants.
+
+Conserve les commandes COD, le catalogue, le stock et l'administration existants. Ne reconstruis pas l'application entière pour ajouter ce module.

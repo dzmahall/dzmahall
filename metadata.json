@@ -1,0 +1,6 @@
+{
+  "name": "DzMahall - Plateforme E-Commerce & Logistique Algérie",
+  "description": "Panneau d'administration DzMahall pour la gestion, configuration et suivi des transporteurs de livraison en Algérie (Yalidine, Guepex, EcoTrack, ZR Express, Maystro, etc.).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
